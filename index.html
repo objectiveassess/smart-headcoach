@@ -161,23 +161,15 @@ function generateSchedule() {
     html += '</table></div>';
   }
 
-    // 출전 횟수 요약
-  html += '<h3>⚖️ 출전 쿼터 요약</h3><table><tr><th>이름</th><th>출전 수</th><th>시각화</th></tr>';
+  // 출전 횟수 요약
+  html += '<h3>⚖️ 출전 쿼터 요약</h3><table><tr><th>이름</th><th>출전 수</th></tr>';
   players.forEach(p => {
-    const barWidth = (p.count / 4) * 100; // 4쿼터 기준 비율
-    html += `
-      <tr>
-        <td>${p.name}</td>
-        <td>${p.count}</td>
-        <td>
-          <div style="background:rgba(255,255,255,0.1); width:100%; height:14px; border-radius:6px;">
-            <div style="background:#00c896; width:${barWidth}%; height:14px; border-radius:6px;"></div>
-          </div>
-        </td>
-      </tr>
-    `;
+    html += `<tr><td>${p.name}</td><td>${p.count}</td></tr>`;
   });
   html += '</table>';
+
+  document.getElementById('result').innerHTML = html;
+}
 
 function pick(pool, n) {
   // 출전이 적은 순으로 우선 정렬
