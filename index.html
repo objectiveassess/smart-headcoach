@@ -19,7 +19,7 @@ body {
   border-radius: 10px;
   padding: 20px;
   position: relative;
-  top: 60px; /* 배너 높이만큼 내려줌 */
+  top: 60px;
 }
 h1 {
   text-align: center;
@@ -133,12 +133,14 @@ function addPlayer() {
       <option value="">1순위 포지션</option>
       <option>GK</option><option>CB</option><option>RB</option><option>LB</option>
       <option>CDM</option><option>CM</option><option>CAM</option>
+      <option>LM</option><option>RM</option>
       <option>ST</option><option>RW</option><option>LW</option>
     </select>
     <select class="pos2">
       <option value="">2순위 포지션</option>
       <option>GK</option><option>CB</option><option>RB</option><option>LB</option>
       <option>CDM</option><option>CM</option><option>CAM</option>
+      <option>LM</option><option>RM</option>
       <option>ST</option><option>RW</option><option>LW</option>
     </select>
   `;
@@ -148,16 +150,16 @@ function addPlayer() {
 // 새로고침 후 자동 생성
 function refreshAndGenerate() {
   localStorage.setItem('playersData', JSON.stringify(getPlayerData()));
-  location.reload(); // 새로고침
+  location.reload();
 }
 
-// 새로고침 후 데이터 유지
+// 새로고침 후 데이터 유지 + 생성 실행
 window.addEventListener('load', () => {
   const saved = localStorage.getItem('playersData');
   if (saved) {
     const list = JSON.parse(saved);
     localStorage.removeItem('playersData');
-    list.forEach(p => addPlayer());
+    list.forEach(() => addPlayer());
     const rows = document.querySelectorAll('#player-inputs .flex');
     list.forEach((p, i) => {
       rows[i].querySelector('.name').value = p.name;
@@ -199,17 +201,20 @@ function generateSchedule() {
   const GK = gk.name;
   const fieldPlayers = players.filter(p => p.name !== GK);
 
-  // 포지션 그룹
+  // ✅ Diamond 4-4-2 포메이션용 포지션 그룹
   const groups = {
     LB: fieldPlayers.filter(p=>p.pos1==='LB'||p.pos2==='LB'),
     RB: fieldPlayers.filter(p=>p.pos1==='RB'||p.pos2==='RB'),
     CB: fieldPlayers.filter(p=>p.pos1==='CB'||p.pos2==='CB'),
-    CM: fieldPlayers.filter(p=>p.pos1==='CM'||p.pos2==='CM'),
+    CDM: fieldPlayers.filter(p=>p.pos1==='CDM'||p.pos2==='CDM'),
     CAM: fieldPlayers.filter(p=>p.pos1==='CAM'||p.pos2==='CAM'),
-    ST: fieldPlayers.filter(p=>['ST','RW','LW'].includes(p.pos1)||['ST','RW','LW'].includes(p.pos2)),
+    LM: fieldPlayers.filter(p=>p.pos1==='LM'||p.pos2==='LM'||p.pos1==='LW'||p.pos2==='LW'),
+    RM: fieldPlayers.filter(p=>p.pos1==='RM'||p.pos2==='RM'||p.pos1==='RW'||p.pos2==='RW'),
+    ST: fieldPlayers.filter(p=>p.pos1==='ST'||p.pos2==='ST'),
   };
 
-  const order = ['GK','LB','CB','CB','RB','CM','CAM','CM','ST','ST'];
+  // ✅ Diamond 4-4-2 순서 (11명)
+  const order = ['GK','LB','CB','CB','RB','CDM','LM','RM','CAM','ST','ST'];
   const quarters=[[],[],[],[]];
 
   for(let q=0;q<4;q++){
