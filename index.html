@@ -63,6 +63,11 @@ th, td {
   gap: 6px;
   align-items: center;
 }
+.candidates {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #a0f0d1;
+}
 </style>
 </head>
 <body>
@@ -123,47 +128,57 @@ function generateSchedule() {
     return;
   }
 
-  // GK 4쿼터 고정
   const GK = gk.name;
   gk.count = 4;
 
   const fieldPlayers = players.filter(p => p.name !== GK);
 
-  // 포지션 그룹별 분류
-  const defenders = fieldPlayers.filter(p => ['CB','RB','LB'].includes(p.pos1) || ['CB','RB','LB'].includes(p.pos2));
-  const mids = fieldPlayers.filter(p => ['CDM','CM','CAM'].includes(p.pos1) || ['CDM','CM','CAM'].includes(p.pos2));
-  const forwards = fieldPlayers.filter(p => ['ST','RW','LW'].includes(p.pos1) || ['ST','RW','LW'].includes(p.pos2));
+  // 포지션 그룹
+  const groups = {
+    LB: fieldPlayers.filter(p=>['LB'].includes(p.pos1)||['LB'].includes(p.pos2)),
+    RB: fieldPlayers.filter(p=>['RB'].includes(p.pos1)||['RB'].includes(p.pos2)),
+    CB: fieldPlayers.filter(p=>['CB'].includes(p.pos1)||['CB'].includes(p.pos2)),
+    CDM: fieldPlayers.filter(p=>['CDM'].includes(p.pos1)||['CDM'].includes(p.pos2)),
+    CM: fieldPlayers.filter(p=>['CM'].includes(p.pos1)||['CM'].includes(p.pos2)),
+    CAM: fieldPlayers.filter(p=>['CAM'].includes(p.pos1)||['CAM'].includes(p.pos2)),
+    ST: fieldPlayers.filter(p=>['ST','RW','LW'].includes(p.pos1)||['ST','RW','LW'].includes(p.pos2)),
+  };
 
+  const positionOrder = ['GK','LB','CB','CB','RB','CM','CDM','CM','CAM','ST','ST'];
   const quarters = [[],[],[],[]];
 
-  for (let q = 0; q < 4; q++) {
+  for(let q=0;q<4;q++){
     const lineup = [];
-    lineup.push({pos:'GK', name:GK});
-
-    // 수비 4명
-    let defs = pick(defenders,4);
-    // 미드필더 4명
-    let midsel = pick(mids,4);
-    // 공격수 2명
-    let fwds = pick(forwards,2);
-
-    lineup.push(...defs, ...midsel, ...fwds);
+    positionOrder.forEach(pos=>{
+      let player = pick(groups[pos],1)[0];
+      if(!player) player = empty(pos);
+      lineup.push(player);
+    });
     quarters[q] = lineup;
   }
 
-  // 출력
+  // 결과 출력
   let html = '';
-  for (let i = 0; i < 4; i++) {
-    html += `<div class="quarter"><h3>🕒 ${i+1}쿼터 (25분)</h3><table><tr><th>포지션</th><th>이름</th></tr>`;
-    quarters[i].forEach(p => {
+  for(let i=0;i<4;i++){
+    html += `<div class="quarter"><h3>🕒 ${i+1}쿼터 (25분)</h3>
+    <table><tr><th>포지션</th><th>이름</th></tr>`;
+    quarters[i].forEach(p=>{
       html += `<tr><td>${p.pos}</td><td>${p.name}</td></tr>`;
     });
-    html += '</table></div>';
+    html += '</table>';
+
+    // 후보 선수 표시
+    html += '<div class="candidates"><strong>포지션별 후보 선수:</strong><br>';
+    for(let pos of positionOrder){
+      const names = groups[pos].map(p=>p.name).join(', ');
+      html += `${pos}: ${names || '—'}<br>`;
+    }
+    html += '</div></div>';
   }
 
-  // 출전 횟수 요약
+  // 출전 요약
   html += '<h3>⚖️ 출전 쿼터 요약</h3><table><tr><th>이름</th><th>출전 수</th></tr>';
-  players.forEach(p => {
+  players.forEach(p=>{
     html += `<tr><td>${p.name}</td><td>${p.count}</td></tr>`;
   });
   html += '</table>';
@@ -171,18 +186,22 @@ function generateSchedule() {
   document.getElementById('result').innerHTML = html;
 }
 
-function pick(pool, n) {
-  // 출전이 적은 순으로 우선 정렬
+function pick(pool, n){
+  if(!pool || pool.length===0) return [];
   const sorted = [...pool].sort((a,b)=>a.count-b.count);
   const chosen = [];
-  for (let p of sorted) {
-    if (chosen.length >= n) break;
-    if (p.count < 3) { // 최대 3쿼터 제한
+  for(let p of sorted){
+    if(chosen.length>=n) break;
+    if(p.count<3){
       chosen.push({pos: p.pos1 || '기타', name: p.name});
       p.count++;
     }
   }
   return chosen;
+}
+
+function empty(pos){
+  return {pos: pos, name: '—'};
 }
 </script>
 </body>
