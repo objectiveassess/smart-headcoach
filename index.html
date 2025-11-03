@@ -18,6 +18,8 @@ body {
   background: rgba(255,255,255,0.05);
   border-radius: 10px;
   padding: 20px;
+  position: relative;
+  top: 60px; /* 배너 높이만큼 내려줌 */
 }
 h1 {
   text-align: center;
@@ -63,13 +65,42 @@ th, td {
   gap: 6px;
   align-items: center;
 }
+
+/* 배너 스타일 */
+#ad-banner {
+  position: fixed;
+  top: -60px; /* 애니메이션 시작 시 화면 위 */
+  left: 0;
+  width: 100%;
+  background: #00c896;
+  color: #0b1622;
+  text-align: center;
+  padding: 15px 0;
+  font-weight: 600;
+  z-index: 9999;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+  transition: top 0.5s ease;
+}
+#ad-close {
+  cursor: pointer;
+  margin-left: 15px;
+  font-weight: bold;
+}
 </style>
 </head>
 <body>
+
+<!-- 상단 배너 광고 -->
+<div id="ad-banner">
+  광고주를 찾습니다, 광고단가: 무료, 연락: 김민수
+  <span id="ad-close">✖</span>
+</div>
+
 <div class="container">
   <h1>⚽ 조기축구 4쿼터 자동 배정 (Diamond 4-4-2)</h1>
   <p>이름과 포지션을 입력하면 자동으로 쿼터별 포메이션을 생성합니다.<br>
-  🧤 골키퍼는 4쿼터 전부 고정, 나머지는 3쿼터 이하만 배정됩니다.</p>
+  🧤 골키퍼는 4쿼터 전부 고정, 나머지는 3쿼터 이하만 배정됩니다.
+  라인업은 GK->수비4인->미드필더4인->공격2인 순입니다. 큰틀에서 유동적 배치요함</p>
 
   <div id="player-inputs"></div>
   <button onclick="addPlayer()">+ 선수 추가</button>
@@ -80,6 +111,17 @@ th, td {
 
 <script>
 let players = [];
+
+// 배너 애니메이션
+window.onload = function() {
+  const banner = document.getElementById('ad-banner');
+  setTimeout(()=>{ banner.style.top = '0'; }, 300); // 0.3초 후 슬라이드 다운
+}
+document.getElementById('ad-close').addEventListener('click', function(){
+  const banner = document.getElementById('ad-banner');
+  banner.style.top = '-60px'; // 슬라이드 업
+  document.querySelector('.container').style.top = '0'; // 컨테이너 원위치
+});
 
 function addPlayer() {
   const div = document.createElement('div');
@@ -104,86 +146,73 @@ function addPlayer() {
 
 function generateSchedule() {
   players = [];
-  const rows = document.querySelectorAll('#player-inputs .flex');
-  rows.forEach(r => {
+  document.querySelectorAll('#player-inputs .flex').forEach(r=>{
     const name = r.querySelector('.name').value.trim();
     const pos1 = r.querySelector('.pos1').value;
     const pos2 = r.querySelector('.pos2').value;
-    if (name) players.push({ name, pos1, pos2, count: 0 });
+    if(name) players.push({name,pos1,pos2,count:0});
   });
 
-  if (players.length < 11) {
-    alert('최소 11명 이상 입력해주세요!');
-    return;
-  }
+  if(players.length < 11){ alert('최소 11명 이상 입력해주세요!'); return; }
+  const gk = players.find(p=>p.pos1==='GK'||p.pos2==='GK');
+  if(!gk){ alert('골키퍼(GK)가 반드시 1명 이상 필요합니다!'); return; }
 
-  const gk = players.find(p => p.pos1 === 'GK' || p.pos2 === 'GK');
-  if (!gk) {
-    alert('골키퍼(GK)가 반드시 1명 이상 필요합니다!');
-    return;
-  }
-
-  // GK 4쿼터 고정
-  const GK = gk.name;
   gk.count = 4;
+  const GK = gk.name;
+  const fieldPlayers = players.filter(p=>p.name!==GK);
 
-  const fieldPlayers = players.filter(p => p.name !== GK);
+  // 포지션별 그룹
+  const groups = {
+    LB: fieldPlayers.filter(p=>p.pos1==='LB'||p.pos2==='LB'),
+    RB: fieldPlayers.filter(p=>p.pos1==='RB'||p.pos2==='RB'),
+    CB: fieldPlayers.filter(p=>p.pos1==='CB'||p.pos2==='CB'),
+    CDM: fieldPlayers.filter(p=>p.pos1==='CDM'||p.pos2==='CDM'),
+    CM: fieldPlayers.filter(p=>p.pos1==='CM'||p.pos2==='CM'),
+    CAM: fieldPlayers.filter(p=>p.pos1==='CAM'||p.pos2==='CAM'),
+    ST: fieldPlayers.filter(p=>['ST','RW','LW'].includes(p.pos1)||['ST','RW','LW'].includes(p.pos2)),
+  };
 
-  // 포지션 그룹별 분류
-  const defenders = fieldPlayers.filter(p => ['CB','RB','LB'].includes(p.pos1) || ['CB','RB','LB'].includes(p.pos2));
-  const mids = fieldPlayers.filter(p => ['CDM','CM','CAM'].includes(p.pos1) || ['CDM','CM','CAM'].includes(p.pos2));
-  const forwards = fieldPlayers.filter(p => ['ST','RW','LW'].includes(p.pos1) || ['ST','RW','LW'].includes(p.pos2));
+  const order = ['GK','LB','CB','CB','RB','CM','CAM','CM','ST','ST'];
+  const quarters=[[],[],[],[]];
 
-  const quarters = [[],[],[],[]];
-
-  for (let q = 0; q < 4; q++) {
-    const lineup = [];
-    lineup.push({pos:'GK', name:GK});
-
-    // 수비 4명
-    let defs = pick(defenders,4);
-    // 미드필더 4명
-    let midsel = pick(mids,4);
-    // 공격수 2명
-    let fwds = pick(forwards,2);
-
-    lineup.push(...defs, ...midsel, ...fwds);
-    quarters[q] = lineup;
+  for(let q=0;q<4;q++){
+    const lineup=[];
+    order.forEach(pos=>{
+      const p = pick(groups[pos],1)[0] || empty(pos);
+      if(pos==='ST' && p.name!=='—') p.pos='ST';
+      lineup.push(p);
+    });
+    quarters[q]=lineup;
   }
 
   // 출력
-  let html = '';
-  for (let i = 0; i < 4; i++) {
-    html += `<div class="quarter"><h3>🕒 ${i+1}쿼터 (25분)</h3><table><tr><th>포지션</th><th>이름</th></tr>`;
-    quarters[i].forEach(p => {
-      html += `<tr><td>${p.pos}</td><td>${p.name}</td></tr>`;
-    });
-    html += '</table></div>';
-  }
-
-  // 출전 횟수 요약
-  html += '<h3>⚖️ 출전 쿼터 요약</h3><table><tr><th>이름</th><th>출전 수</th></tr>';
-  players.forEach(p => {
-    html += `<tr><td>${p.name}</td><td>${p.count}</td></tr>`;
+  let html='';
+  quarters.forEach((qline,i)=>{
+    html+=`<div class="quarter"><h3>🕒 ${i+1}쿼터 (25분)</h3><table><tr><th>포지션</th><th>이름</th></tr>`;
+    qline.forEach(p=>{ html+=`<tr><td>${p.pos}</td><td>${p.name}</td></tr>` });
+    html+='</table></div>';
   });
-  html += '</table>';
 
-  document.getElementById('result').innerHTML = html;
+  // 출전 요약
+  html+='<h3>⚖️ 출전 쿼터 요약</h3><table><tr><th>이름</th><th>출전 수</th></tr>';
+  players.forEach(p=>{ html+=`<tr><td>${p.name}</td><td>${p.count}</td></tr>` });
+  html+='</table>';
+
+  document.getElementById('result').innerHTML=html;
 }
 
-function pick(pool, n) {
-  // 출전이 적은 순으로 우선 정렬
+function pick(pool,n){
+  if(!pool||pool.length===0) return [];
   const sorted = [...pool].sort((a,b)=>a.count-b.count);
-  const chosen = [];
-  for (let p of sorted) {
-    if (chosen.length >= n) break;
-    if (p.count < 3) { // 최대 3쿼터 제한
-      chosen.push({pos: p.pos1 || '기타', name: p.name});
-      p.count++;
-    }
+  const chosen=[];
+  for(const p of sorted){
+    if(chosen.length>=n) break;
+    if(p.count<3){ chosen.push(p); p.count++; }
   }
   return chosen;
 }
+
+function empty(pos){ return {pos:pos,name:'—'}; }
 </script>
 </body>
 </html>
