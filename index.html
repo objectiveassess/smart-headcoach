@@ -66,10 +66,10 @@ th, td {
   align-items: center;
 }
 
-/* 배너 스타일 */
+/* 상단 배너 */
 #ad-banner {
   position: fixed;
-  top: -60px; /* 애니메이션 시작 시 화면 위 */
+  top: -60px;
   left: 0;
   width: 100%;
   background: #00c896;
@@ -90,23 +90,21 @@ th, td {
 </head>
 <body>
 
-<!-- 상단 배너 광고 -->
+<!-- 상단 배너 -->
 <div id="ad-banner">
-  "It's okay though"
-  -도사컴퍼니
+  "It's okay though" - 도사컴퍼니
   <span id="ad-close">✖</span>
 </div>
 
 <div class="container">
   <h1>⚽ 조기축구 4쿼터 자동 배정 (Diamond 4-4-2)</h1>
   <p>이름과 포지션을 입력하면 자동으로 쿼터별 포메이션을 생성합니다.<br>
-  🧤 골키퍼는 4쿼터 전부 고정, 나머지는 3쿼터 이하만 배정됩니다.
-  📋 라인업은 GK->수비4인->미드필더4인->공격2인 순입니다. 
-  🏟️ 세부 포지션은 감독재량</p>
+  🧤 GK는 4쿼터 전부 고정, 나머지는 3쿼터 이하만 배정됩니다.<br>
+  📋 라인업: GK → 수비4 → 미드4 → 공격2 순 (Diamond 4-4-2)</p>
 
   <div id="player-inputs"></div>
   <button onclick="addPlayer()">+ 선수 추가</button>
-  <button onclick="generateSchedule()">✅ 포메이션 생성</button>
+  <button onclick="refreshAndGenerate()">✅ 포메이션 생성</button>
 
   <div id="result"></div>
 </div>
@@ -117,14 +115,15 @@ let players = [];
 // 배너 애니메이션
 window.onload = function() {
   const banner = document.getElementById('ad-banner');
-  setTimeout(()=>{ banner.style.top = '0'; }, 300); // 0.3초 후 슬라이드 다운
+  setTimeout(() => { banner.style.top = '0'; }, 300);
 }
 document.getElementById('ad-close').addEventListener('click', function(){
   const banner = document.getElementById('ad-banner');
-  banner.style.top = '-60px'; // 슬라이드 업
-  document.querySelector('.container').style.top = '0'; // 컨테이너 원위치
+  banner.style.top = '-60px';
+  document.querySelector('.container').style.top = '0';
 });
 
+// 선수 추가
 function addPlayer() {
   const div = document.createElement('div');
   div.className = 'flex';
@@ -146,29 +145,65 @@ function addPlayer() {
   document.getElementById('player-inputs').appendChild(div);
 }
 
-function generateSchedule() {
-  players = [];
-  document.querySelectorAll('#player-inputs .flex').forEach(r=>{
+// 새로고침 후 자동 생성
+function refreshAndGenerate() {
+  localStorage.setItem('playersData', JSON.stringify(getPlayerData()));
+  location.reload(); // 새로고침
+}
+
+// 새로고침 후 데이터 유지
+window.addEventListener('load', () => {
+  const saved = localStorage.getItem('playersData');
+  if (saved) {
+    const list = JSON.parse(saved);
+    localStorage.removeItem('playersData');
+    list.forEach(p => addPlayer());
+    const rows = document.querySelectorAll('#player-inputs .flex');
+    list.forEach((p, i) => {
+      rows[i].querySelector('.name').value = p.name;
+      rows[i].querySelector('.pos1').value = p.pos1;
+      rows[i].querySelector('.pos2').value = p.pos2;
+    });
+    generateSchedule();
+  }
+});
+
+// 선수 데이터 읽기
+function getPlayerData() {
+  const data = [];
+  document.querySelectorAll('#player-inputs .flex').forEach(r => {
     const name = r.querySelector('.name').value.trim();
     const pos1 = r.querySelector('.pos1').value;
     const pos2 = r.querySelector('.pos2').value;
-    if(name) players.push({name,pos1,pos2,count:0});
+    if (name) data.push({name, pos1, pos2});
   });
+  return data;
+}
 
-  if(players.length < 11){ alert('최소 11명 이상 입력해주세요!'); return; }
-  const gk = players.find(p=>p.pos1==='GK'||p.pos2==='GK');
-  if(!gk){ alert('골키퍼(GK)가 반드시 1명 이상 필요합니다!'); return; }
+// 포메이션 생성
+function generateSchedule() {
+  players = getPlayerData().map(p => ({...p, count:0}));
+
+  if (players.length < 11) {
+    alert('⚠️ 최소 11명 이상 입력해주세요!');
+    return;
+  }
+
+  const gk = players.find(p => p.pos1==='GK' || p.pos2==='GK');
+  if (!gk) {
+    alert('⚠️ 골키퍼(GK)가 반드시 1명 이상 필요합니다!');
+    return;
+  }
 
   gk.count = 4;
   const GK = gk.name;
-  const fieldPlayers = players.filter(p=>p.name!==GK);
+  const fieldPlayers = players.filter(p => p.name !== GK);
 
-  // 포지션별 그룹
+  // 포지션 그룹
   const groups = {
     LB: fieldPlayers.filter(p=>p.pos1==='LB'||p.pos2==='LB'),
     RB: fieldPlayers.filter(p=>p.pos1==='RB'||p.pos2==='RB'),
     CB: fieldPlayers.filter(p=>p.pos1==='CB'||p.pos2==='CB'),
-    CDM: fieldPlayers.filter(p=>p.pos1==='CDM'||p.pos2==='CDM'),
     CM: fieldPlayers.filter(p=>p.pos1==='CM'||p.pos2==='CM'),
     CAM: fieldPlayers.filter(p=>p.pos1==='CAM'||p.pos2==='CAM'),
     ST: fieldPlayers.filter(p=>['ST','RW','LW'].includes(p.pos1)||['ST','RW','LW'].includes(p.pos2)),
@@ -180,9 +215,11 @@ function generateSchedule() {
   for(let q=0;q<4;q++){
     const lineup=[];
     order.forEach(pos=>{
-      const p = pick(groups[pos],1)[0] || empty(pos);
-      if(pos==='ST' && p.name!=='—') p.pos='ST';
-      lineup.push(p);
+      if(pos==='GK') lineup.push({pos:'GK', name:GK});
+      else {
+        const p = pick(groups[pos],1)[0] || empty(pos);
+        lineup.push(p);
+      }
     });
     quarters[q]=lineup;
   }
@@ -203,18 +240,19 @@ function generateSchedule() {
   document.getElementById('result').innerHTML=html;
 }
 
+// 출전 적은 순으로 선택
 function pick(pool,n){
   if(!pool||pool.length===0) return [];
   const sorted = [...pool].sort((a,b)=>a.count-b.count);
   const chosen=[];
   for(const p of sorted){
     if(chosen.length>=n) break;
-    if(p.count<3){ chosen.push(p); p.count++; }
+    if(p.count<3){ chosen.push({pos:p.pos1||'기타', name:p.name}); p.count++; }
   }
   return chosen;
 }
 
-function empty(pos){ return {pos:pos,name:'—'}; }
+function empty(pos){ return {pos:pos, name:'—'}; }
 </script>
 </body>
 </html>
