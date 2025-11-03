@@ -101,7 +101,8 @@ function generateSchedule() {
         positionOrder.forEach(pos=>{
             let player = pick(groups[pos],1)[0];
             if(!player) player = empty(pos);
-            if(pos==='ST' && player && ['RW','LW'].includes(player.pos1)) player.pos='ST'; // ST/LW/RW 모두 ST로 표시
+            // ST 표시 고정
+            if(pos==='ST' && player && ['RW','LW'].includes(player.pos1)) player.pos='ST';
             lineup.push(player);
         });
         quarters[q]=lineup;
