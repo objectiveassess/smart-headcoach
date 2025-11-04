@@ -1,219 +1,407 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>⚽ 조기축구 4쿼터 포메이션 자동 배정</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>조기축구 4쿼터 자동 배정 (배포용)</title>
 <style>
-body {
-  font-family: 'Noto Sans KR', sans-serif;
-  background: #0b1622;
-  color: #f0f6fc;
-  margin: 0;
-  padding: 0;
-}
-.container {
-  max-width: 900px;
-  margin: 30px auto;
-  background: rgba(255,255,255,0.05);
-  border-radius: 10px;
-  padding: 20px;
-}
-h1 {
-  text-align: center;
-  color: #00c896;
-}
-input, select, button {
-  padding: 8px;
-  border-radius: 6px;
-  border: none;
-  margin: 4px;
-}
-input, select {
-  width: 100%;
-}
-button {
-  background: #00c896;
-  color: #0b1622;
-  font-weight: 600;
-  cursor: pointer;
-}
-button:hover {
-  background: #00e6aa;
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 15px;
-  font-size: 14px;
-}
-th, td {
-  padding: 8px;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
-  text-align: left;
-}
-.quarter {
-  margin-top: 25px;
-  background: rgba(255,255,255,0.03);
-  border-radius: 8px;
-  padding: 10px;
-}
-.flex {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-}
-.bar {
-  height: 12px;
-  background: #00c896;
-  border-radius: 4px;
-}
+  :root{--bg:#0b1622;--panel:rgba(255,255,255,0.04);--accent:#00c896;--muted:#a8cfc0;}
+  body{font-family:Inter, 'Noto Sans KR',system-ui,Arial; background:var(--bg); color:#f0f6fc; margin:0;padding:18px;}
+  .wrap{max-width:1100px;margin:0 auto;}
+  h1{color:var(--accent); text-align:center;}
+  .flex{display:flex;gap:8px;align-items:center;}
+  .controls{display:flex;gap:8px;flex-wrap:wrap; margin:12px 0;}
+  input,select,button{padding:8px;border-radius:8px;border:none;}
+  input,select{background:#0f1a24;color:#fff;}
+  button{background:var(--accent);color:#061017; font-weight:700; cursor:pointer;}
+  button.secondary{background:#2b3b3d;color:#fff;}
+  .panel{background:var(--panel);padding:12px;border-radius:10px;margin-bottom:12px;}
+  .player-row{display:flex;gap:8px;align-items:center;margin-bottom:6px;}
+  .player-row input{width:28%;}
+  .player-row select{width:22%;}
+  .player-row .del{background:#ff6b6b;color:#fff;padding:6px;border-radius:8px;}
+  .result{margin-top:10px;}
+  .quarter{background:rgba(255,255,255,0.03);padding:10px;border-radius:8px;margin-bottom:10px;}
+  table{width:100%;border-collapse:collapse;font-size:14px;}
+  th,td{padding:8px;border-bottom:1px solid rgba(255,255,255,0.06);text-align:left;}
+  .bar-bg{background:rgba(255,255,255,0.06);border-radius:6px; height:14px; width:100%;}
+  .bar{height:14px;background:var(--accent);border-radius:6px; width:0%; transition:width .6s ease;}
+  .footer-note{color:var(--muted);font-size:13px;margin-top:10px;}
+  #ad {position:fixed;left:50%;top:45%;transform:translate(-50%,-50%);background:#fff;color:#061017;padding:20px 26px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.6);display:none;z-index:999;}
+  #ad button{margin-top:10px;}
+  .small{font-size:13px;color:var(--muted);}
+  .left-col{width:48%;float:left}
+  .right-col{width:48%;float:right}
+  @media(max-width:980px){.left-col,.right-col{width:100%;float:none}}
 </style>
 </head>
 <body>
-<div class="container">
+<div class="wrap">
   <h1>⚽ 조기축구 4쿼터 자동 배정 (Diamond 4-4-2)</h1>
-  <p>이름과 포지션을 입력하면 자동으로 쿼터별 포메이션을 생성합니다.<br>
-  🧤 골키퍼는 4쿼터 전부 고정, 나머지는 2~3쿼터씩만 배정됩니다.</p>
 
-  <div id="player-inputs"></div>
-  <button onclick="addPlayer()">+ 선수 추가</button>
-  <button onclick="generateSchedule()">✅ 포메이션 생성</button>
+  <div class="panel">
+    <div class="flex" style="justify-content:space-between;align-items:center;">
+      <div class="small">선수 입력 → 이름 + 1순위(필수) + 2순위(선택)</div>
+      <div>
+        <button onclick="addPlayerRow()">+ 선수 추가</button>
+        <button class="secondary" onclick="resetSample()">초기 샘플 불러오기</button>
+      </div>
+    </div>
 
-  <div id="result"></div>
+    <div id="player-list" style="margin-top:12px;"></div>
+    <div class="small" style="margin-top:8px;color:var(--muted)">
+      * 최소 11명 이상 필요 (GK 포함). GK는 pos1 또는 pos2에 'GK' 입력.
+    </div>
+  </div>
+
+  <div class="controls">
+    <button onclick="generateSchedule()">✅ 포메이션 생성</button>
+    <button onclick="regenerate()">🔁 다시 시도 (새 조합)</button>
+    <button onclick="downloadTxt()">💾 저장 (txt)</button>
+  </div>
+
+  <div id="result" class="result"></div>
+
+  <div class="panel footer-note">
+    배포용 샘플 버전입니다. 서비스 운영 전 개인정보·광고·저작권 관련 정책을 반드시 검토하세요.
+  </div>
+</div>
+
+<!-- 광고 팝업 -->
+<div id="ad">
+  <h3>It’s okay though</h3>
+  <div style="font-weight:700;margin-top:6px">- 도사컴퍼니</div>
+  <div style="margin-top:8px">
+    <button onclick="hideAd()">닫기</button>
+  </div>
 </div>
 
 <script>
-let players = [];
+/* -------------------------
+  포지션 유사성 (단방향 규칙)
+  반영한 맵 (요청사항 기반)
+----------------------------*/
+const SIMILAR = {
+  GK: [],
+  CB: ['RB','LB'],
+  RB: [],          // RB->CB 불가
+  LB: [],          // LB->CB 불가
+  CDM: ['CM'],
+  CM: ['RM','LM'],
+  CAM: ['CM'],
+  RM: ['CM'],
+  LM: ['CM'],
+  RW: ['ST'],
+  LW: ['ST'],
+  ST: ['RW','LW']
+};
 
-function addPlayer() {
+/* ---------- UI: 선수 입력 행 관리 ---------- */
+function createPlayerRow(pref){
+  const container = document.getElementById('player-list');
   const div = document.createElement('div');
-  div.className = 'flex';
+  div.className = 'player-row';
   div.innerHTML = `
-    <input type="text" placeholder="이름" class="name">
-    <select class="pos1">
+    <input class="pname" placeholder="이름" value="${pref?.name||''}">
+    <select class="ppos1">
       <option value="">1순위 포지션</option>
       <option>GK</option><option>CB</option><option>RB</option><option>LB</option>
       <option>CDM</option><option>CM</option><option>CAM</option>
-      <option>ST</option><option>RW</option><option>LW</option>
+      <option>RM</option><option>LM</option>
+      <option>RW</option><option>LW</option>
+      <option>ST</option>
     </select>
-    <select class="pos2">
+    <select class="ppos2">
       <option value="">2순위 포지션</option>
       <option>GK</option><option>CB</option><option>RB</option><option>LB</option>
       <option>CDM</option><option>CM</option><option>CAM</option>
-      <option>ST</option><option>RW</option><option>LW</option>
+      <option>RM</option><option>LM</option>
+      <option>RW</option><option>LW</option>
+      <option>ST</option>
     </select>
+    <button class="del" title="삭제">삭제</button>
   `;
-  document.getElementById('player-inputs').appendChild(div);
+  container.appendChild(div);
+  if(pref){
+    div.querySelector('.ppos1').value = pref.pos1||'';
+    div.querySelector('.ppos2').value = pref.pos2||'';
+  }
+  div.querySelector('.del').addEventListener('click', ()=>div.remove());
+  return div;
+}
+function addPlayerRow(){ createPlayerRow(); }
+
+/* 초기 샘플 */
+const SAMPLE = [
+  {name:'도윤',pos1:'GK'},{name:'준호',pos1:'CB'},{name:'영호',pos1:'LB',pos2:'CB'},
+  {name:'진우',pos1:'RB'},{name:'철수',pos1:'CDM'},{name:'기훈',pos1:'CM'},
+  {name:'현수',pos1:'CAM'},{name:'상민',pos1:'RW',pos2:'ST'},{name:'태호',pos1:'ST'},
+  {name:'민수',pos1:'ST',pos2:'CAM'},{name:'성민',pos1:'LM'},{name:'호영',pos1:'RM'},
+  {name:'재현',pos1:'CB'},{name:'수강',pos1:'LB'},{name:'창민',pos1:'RB'},{name:'준서',pos1:'CM'},
+  {name:'명수',pos1:'CDM'},{name:'도현',pos1:'LW'}
+];
+function resetSample(){ document.getElementById('player-list').innerHTML=''; SAMPLE.forEach(p=>createPlayerRow(p)); }
+resetSample();
+
+/* ---------- 알고리즘 설정 ---------- */
+const TOTAL_FIELD_SLOTS = 40; // 4쿼터 * 10비GK
+const MAX_CONSEC = 2;         // 연속 최대 2쿼터 (3연속 금지)
+const ATTEMPTS = 120;         // 시도 수 (필요하면 늘리세요)
+
+/* ---------- 전역 저장: 최적 조합 유지/갱신 ---------- */
+let bestGlobal = {score:-Infinity, quarters:null, counts:null};
+
+/* ---------- 헬퍼: 현재 UI에서 선수 목록 읽기 ---------- */
+function readPlayersFromUI(){
+  const rows = Array.from(document.querySelectorAll('.player-row'));
+  const arr = [];
+  for(const r of rows){
+    const name = r.querySelector('.pname').value.trim();
+    const pos1 = r.querySelector('.ppos1').value;
+    const pos2 = r.querySelector('.ppos2').value;
+    if(!name) continue;
+    arr.push({name, pos1:pos1||'', pos2:pos2||'', assigned:0, lastQ:-5, consec:0});
+  }
+  return arr;
 }
 
-function generateSchedule() {
-  players = [];
-  const rows = document.querySelectorAll('#player-inputs .flex');
-  rows.forEach(r => {
-    const name = r.querySelector('.name').value.trim();
-    const pos1 = r.querySelector('.pos1').value;
-    const pos2 = r.querySelector('.pos2').value;
-    if (name) players.push({ name, pos1, pos2, count: 0, lastPlayed: -1 });
-  });
-
-  if (players.length < 11) {
-    alert('⚠️ 최소 11명 이상 입력해주세요!');
-    return;
+/* ---------- 목표 분배: 각 필드플레이어(targetCounts) 계산 ---------- */
+function computeTargets(fieldPlayers){
+  const M = fieldPlayers.length;
+  // feasible if 2*M <= 40 <= 3*M
+  if(2*M <= TOTAL_FIELD_SLOTS && TOTAL_FIELD_SLOTS <= 3*M){
+    // 기본 2쿼터 배정, 남는 슬롯을 1씩 나눔 (최대 +1)
+    const targets = {};
+    fieldPlayers.forEach(p=>targets[p.name]=2);
+    let rem = TOTAL_FIELD_SLOTS - 2*M; // 0..M
+    // distribute fairly: prefer those with pos1 more usable (but we'll randomize tie)
+    const order = [...fieldPlayers].sort(()=>Math.random()-0.5);
+    let idx=0;
+    while(rem>0){
+      const name=order[idx].name;
+      if(targets[name]<3){ targets[name]++; rem--; }
+      idx=(idx+1)%order.length;
+    }
+    return targets;
+  } else {
+    // 불가피한 경우: 평탄하게 floor/ceil 분배
+    const base = Math.floor(TOTAL_FIELD_SLOTS / M);
+    const extra = TOTAL_FIELD_SLOTS - base*M;
+    const out = {};
+    const order = [...fieldPlayers].sort(()=>Math.random()-0.5);
+    for(let i=0;i<M;i++) out[order[i].name]=base + (i<extra?1:0);
+    return out;
   }
-
-  const gk = players.find(p => p.pos1 === 'GK' || p.pos2 === 'GK');
-  if (!gk) {
-    alert('⚠️ 골키퍼(GK)가 반드시 1명 이상 필요합니다!');
-    return;
-  }
-
-  const GK = gk.name;
-  gk.count = 4;
-  gk.lastPlayed = 0;
-
-  const fieldPlayers = players.filter(p => p.name !== GK);
-
-  const quarters = [[], [], [], []];
-
-  const formation = {
-    defenders: ['CB', 'RB', 'LB', 'CB'],
-    mids: ['CDM', 'CM', 'CM', 'CAM'],
-    forwards: ['ST', 'ST']
-  };
-
-  const similar = {
-    CB: ['CDM', 'RB', 'LB'],
-    RB: ['CB', 'RW'],
-    LB: ['CB', 'LW'],
-    CDM: ['CB', 'CM'],
-    CM: ['CDM', 'CAM', 'RM', 'LM'],
-    CAM: ['CM', 'ST'],
-    RW: ['RB', 'LW', 'ST'],
-    LW: ['LB', 'RW', 'ST'],
-    ST: ['RW', 'LW', 'CAM']
-  };
-
-  for (let q = 0; q < 4; q++) {
-    const lineup = [];
-    lineup.push({ pos: 'GK', name: GK });
-
-    assignGroup(lineup, fieldPlayers, formation.defenders, q, similar);
-    assignGroup(lineup, fieldPlayers, formation.mids, q, similar);
-    assignGroup(lineup, fieldPlayers, formation.forwards, q, similar);
-
-    quarters[q] = lineup;
-  }
-
-  displayResult(quarters);
 }
 
-function assignGroup(lineup, pool, positions, q, similar) {
-  for (let pos of positions) {
-    let candidates = pool.filter(p => p.count < 3 && q - p.lastPlayed > 0);
+/* ---------- 후보 선택 우선순위 함수 ----------
+   pos: target position string
+   pool: array of player objects (mutable)
+   constraints: object with current q, targets, chosenThisQuarter map
+-------------------------------------------------- */
+function pickCandidateForPos(pos, pool, q, targets, chosenThisQuarter){
+  // Helper: check if picking p would violate rules (over target or cause 3-consec)
+  const canPick = (p) => {
+    if(p.assigned >= targets[p.name]) return false; // already reached target
+    // avoid 3 consecutive: if p.lastQ === q-1 and p.consec >= MAX_CONSEC -> cannot pick
+    if(p.lastQ === q-1 && p.consec >= MAX_CONSEC) return false;
+    // avoid picking same player twice in same quarter
+    if(chosenThisQuarter.has(p.name)) return false;
+    return true;
+  };
 
-    candidates.sort((a, b) => {
-      const aMatch = matchScore(a, pos, similar);
-      const bMatch = matchScore(b, pos, similar);
-      if (a.count !== b.count) return a.count - b.count;
-      return bMatch - aMatch;
-    });
+  // 1) search pos1 match (1순위) first
+  let cand = pool.find(p => canPick(p) && p.pos1 === pos);
+  if(cand) return cand;
+  // 2) pos2 match
+  cand = pool.find(p => canPick(p) && p.pos2 === pos);
+  if(cand) return cand;
+  // 3) similar mapping (directional)
+  cand = pool.find(p => canPick(p) && ((SIMILAR[p.pos1]||[]).includes(pos) || (SIMILAR[p.pos2]||[]).includes(pos)));
+  if(cand) return cand;
+  // 4) fallback: any who still needs slots
+  cand = pool.find(p => canPick(p));
+  return cand || null;
+}
 
-    const pick = candidates[0];
-    if (pick) {
-      lineup.push({ pos, name: pick.name });
-      pick.count++;
-      pick.lastPlayed = q;
+/* ---------- 시도(랜덤 기반)로 분배 시도 ---------- */
+function attemptScheduling(allPlayers, targets){
+  // deep clone player state for this attempt
+  const pool = allPlayers.map(p => ({...p, assigned:0, lastQ:-5, consec:0}));
+  const quarters = [[],[],[],[]];
+  const positionOrder = ['GK','LB','CB','CB','RB','CDM','CM','CM','CAM','ST','ST']; // canonical assignments per quarter
+
+  // Place GK first: choose the player with pos1==='GK' or pos2==='GK' (pos1 priority)
+  const gk = pool.find(p=>p.pos1==='GK') || pool.find(p=>p.pos2==='GK');
+  if(!gk) return null;
+  // ensure gk allocated 4 and removed from field pool (but keep in pool for counts)
+  gk.assigned = 4;
+  gk.lastQ = 0;
+  gk.consec = 0;
+
+  // For each quarter
+  for(let q=0;q<4;q++){
+    const chosenThisQuarter = new Set();
+    // add GK
+    quarters[q].push({pos:'GK', name:gk.name});
+    // For each position in positionOrder (excluding the already filled GK)
+    for(const pos of positionOrder.slice(1)){
+      // heuristics: shuffle pool order for fairness
+      pool.sort(()=>Math.random()-0.5);
+      const candidate = pickCandidateForPos(pos, pool, q, targets, chosenThisQuarter);
+      if(!candidate){
+        // fail this attempt if no candidate available for required pos
+        return null;
+      }
+      // assign
+      quarters[q].push({pos, name:candidate.name});
+      candidate.assigned++;
+      // update consecutive tracking
+      if(candidate.lastQ === q-1) candidate.consec = candidate.consec + 1;
+      else candidate.consec = 1;
+      candidate.lastQ = q;
+      chosenThisQuarter.add(candidate.name);
     }
   }
-}
 
-function matchScore(player, pos, similar) {
-  if (player.pos1 === pos) return 3;
-  if (player.pos2 === pos) return 2;
-  if (similar[player.pos1]?.includes(pos) || similar[player.pos2]?.includes(pos)) return 1;
-  return 0;
-}
-
-function displayResult(quarters) {
-  let html = '';
-  for (let i = 0; i < 4; i++) {
-    html += `<div class="quarter"><h3>🕒 ${i+1}쿼터</h3><table><tr><th>포지션</th><th>이름</th></tr>`;
-    quarters[i].forEach(p => {
-      html += `<tr><td>${p.pos}</td><td>${p.name}</td></tr>`;
-    });
-    html += '</table></div>';
+  // After filling quarters, verify each player's assigned count equals targets (except GK may be 4)
+  const unmet = pool.filter(p => p.name !== gk.name && p.assigned !== targets[p.name]);
+  if(unmet.length > 0){
+    // some players didn't meet targets → this attempt invalid
+    return null;
   }
 
-  html += '<h3>⚖️ 출전 쿼터 요약</h3><table><tr><th>이름</th><th>출전 수</th><th>그래프</th></tr>';
-  players.forEach(p => {
-    const width = (p.count / 3) * 100;
-    html += `<tr><td>${p.name}</td><td>${p.count}</td><td><div class="bar" style="width:${width}%"></div></td></tr>`;
+  // compute score (prefer more pos1 matches, then pos2, then similar)
+  let score = 0;
+  quarters.forEach((qarr) => {
+    qarr.forEach(entry => {
+      if(entry.pos==='GK'){ score += 2; return; }
+      const orig = allPlayers.find(x=>x.name===entry.name);
+      if(!orig) return;
+      if(orig.pos1 === entry.pos) score += 3;
+      else if(orig.pos2 === entry.pos) score += 2;
+      else if((SIMILAR[orig.pos1]||[]).includes(entry.pos) || (SIMILAR[orig.pos2]||[]).includes(entry.pos)) score += 1;
+    });
   });
-  html += '</table>';
 
-  document.getElementById('result').innerHTML = html;
+  // return successful schedule
+  const counts = Object.fromEntries(pool.map(p=>[p.name,p.assigned]));
+  return {quarters, score, counts};
 }
+
+/* ---------- 메인: 생성 함수 ---------- */
+function generateSchedule(){
+  bestGlobal = {score:-Infinity, quarters:null, counts:null}; // reset best (optionally persist)
+  const allPlayers = readPlayersFromUI();
+  if(allPlayers.length < 11){ alert('선수를 11명 이상 입력하세요.'); return; }
+
+  // find GK existence
+  const gkCandidate = allPlayers.find(p=>p.pos1==='GK') || allPlayers.find(p=>p.pos2==='GK');
+  if(!gkCandidate){ alert('골키퍼(GK)가 1명 이상 필요합니다 (pos1 또는 pos2에 GK 입력).'); return; }
+
+  // field players = excluding chosen GK slot (we still keep GK in list for display)
+  const fieldPlayers = allPlayers.filter(p => !(p.pos1==='GK' || p.pos2==='GK')).length === allPlayers.length ? allPlayers.filter(p=>p.name!==gkCandidate.name) : allPlayers.filter(p=>!(p.name===gkCandidate.name));
+
+  // compute targets (field only)
+  const fieldList = allPlayers.filter(p=>!(p.pos1==='GK'||p.pos2==='GK' || p.name===gkCandidate.name));
+  const targets = computeTargets(fieldList);
+
+  // Ensure GK has assigned 4 separately (we remove GK from target map)
+  // Run multiple attempts (randomized) to find valid schedule
+  let bestAttempt = null;
+  for(let i=0;i<ATTEMPTS;i++){
+    const attempt = attemptScheduling(allPlayers, targets);
+    if(attempt && attempt.score > (bestAttempt?.score||-Infinity)){
+      bestAttempt = attempt;
+      // early break if perfect high score (optional)
+      if(attempt.score === (4*11*3)) break;
+    }
+  }
+
+  if(!bestAttempt){
+    alert('유효한 배정을 찾지 못했습니다. 선수 수/포지션을 조정하거나 시도 수(ATTEMPTS)를 늘리세요.');
+    return;
+  }
+
+  // update global best if better
+  if(bestAttempt.score >= bestGlobal.score){
+    bestGlobal = {score:bestAttempt.score, quarters:bestAttempt.quarters, counts:bestAttempt.counts};
+  }
+
+  // render result
+  renderResult(bestGlobal.quarters, bestGlobal.counts, bestGlobal.score);
+}
+
+/* ---------- 재시도 버튼: 다시 시도(새 랜덤 조합) ---------- */
+function regenerate(){
+  // use current UI players and recompute (preserve previous bestGlobal also)
+  const allPlayers = readPlayersFromUI();
+  if(allPlayers.length < 11){ alert('선수를 11명 이상 입력하세요.'); return; }
+  const fieldList = allPlayers.filter(p=>!(p.pos1==='GK'||p.pos2==='GK' || (allPlayers.find(x=>x.pos1==='GK' || x.pos2==='GK')?.name === p.name)));
+  const targets = computeTargets(fieldList);
+
+  // Try attempts and update bestGlobal only if we find better
+  let bestAttempt = null;
+  for(let i=0;i<ATTEMPTS;i++){
+    const attempt = attemptScheduling(allPlayers, targets);
+    if(attempt && (!bestAttempt || attempt.score > bestAttempt.score)) bestAttempt = attempt;
+  }
+  if(!bestAttempt){ alert('새 조합을 찾지 못했습니다.'); return; }
+  if(bestAttempt.score >= bestGlobal.score){
+    bestGlobal = {score:bestAttempt.score, quarters:bestAttempt.quarters, counts:bestAttempt.counts};
+  }
+  renderResult(bestGlobal.quarters, bestGlobal.counts, bestGlobal.score);
+}
+
+/* ---------- 렌더링 함수 ---------- */
+function renderResult(quarters, counts, score){
+  const out = document.getElementById('result');
+  let html = `<div class="panel"><div style="display:flex;justify-content:space-between;align-items:center;"><div><strong>최적 점수:</strong> ${score}</div><div class="small">(높을수록 1순위·2순위 우선 반영)</div></div></div>`;
+
+  for(let q=0;q<4;q++){
+    html += `<div class="quarter"><h3>🕒 ${q+1}쿼터</h3><table><tr><th>포지션</th><th>선수</th></tr>`;
+    if(!quarters || !quarters[q]){ html += `<tr><td colspan="2">배정 없음</td></tr></table></div>`; continue; }
+    // ensure 11 printed (it should be)
+    quarters[q].forEach(entry => {
+      html += `<tr><td>${entry.pos}</td><td>${entry.name}</td></tr>`;
+    });
+    html += `</table></div>`;
+  }
+
+  // summary table with bars
+  html += `<div class="panel"><h3>⚖️ 출전 쿼터 요약</h3><table><tr><th>이름</th><th>쿼터 수</th><th>그래프</th></tr>`;
+  const sorted = Object.keys(counts).sort((a,b)=>counts[b]-counts[a]||a.localeCompare(b));
+  sorted.forEach(name=>{
+    const c = counts[name];
+    const pct = Math.round((c/4)*100);
+    html += `<tr><td>${name}</td><td>${c}</td><td><div class="bar-bg"><div class="bar" style="width:${pct}%;"></div></div></td></tr>`;
+  });
+  html += `</table></div>`;
+  out.innerHTML = html;
+  // animate bars (they already have transition)
+  setTimeout(()=>{ document.querySelectorAll('.bar').forEach(b=>b.style.width=b.style.width); }, 50);
+}
+
+/* ---------- 유틸: 저장 ---------- */
+function downloadTxt(){
+  if(!bestGlobal.quarters){ alert('먼저 포메이션을 생성하세요.'); return; }
+  let txt = `포메이션 (최적 점수: ${bestGlobal.score})\n\n`;
+  bestGlobal.quarters.forEach((q,i)=>{
+    txt+= `${i+1}쿼터:\n`;
+    q.forEach(e=>txt+= `${e.pos}: ${e.name}\n`);
+    txt += '\n';
+  });
+  const blob = new Blob([txt],{type:'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'formation.txt';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+/* ---------- 광고 팝업 제어 (한 번만 자동 표시) ---------- */
+function hideAd(){ document.getElementById('ad').style.display='none'; }
+(function(){ if(!localStorage.getItem('ad_shown')){ setTimeout(()=>{ document.getElementById('ad').style.display='block'; localStorage.setItem('ad_shown','1'); },3000); } })();
+
 </script>
 </body>
 </html>
