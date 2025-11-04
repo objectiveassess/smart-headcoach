@@ -156,24 +156,21 @@ function createPlayerRow(pref){
 function addPlayerRow(){ createPlayerRow(); }
 function loadSample(){
   const SAMPLE = [
-    {name:'도윤',pos1:'GK'},
-    {name:'준호',pos1:'CB'},
-    {name:'영호',pos1:'LB',pos2:'CB'},
-    {name:'진우',pos1:'RB'},
-    {name:'철수',pos1:'CDM'},
-    {name:'기훈',pos1:'CM'},
-    {name:'현수',pos1:'CAM'},
-    {name:'상민',pos1:'RW',pos2:'ST'},
-    {name:'태호',pos1:'ST'},
-    {name:'민수',pos1:'ST',pos2:'CAM'},
-    {name:'성민',pos1:'LM'},
-    {name:'호영',pos1:'RM'},
-    {name:'재현',pos1:'CB'},
-    {name:'수강',pos1:'LB'},
-    {name:'창민',pos1:'RB'},
-    {name:'준서',pos1:'CM'},
-    {name:'명수',pos1:'CDM'},
-    {name:'도현',pos1:'LW'}
+    {name:'승현',pos1:'GK'},
+    {name:'도현',pos1:'ST',pos2:'RW'},
+    {name:'군택',pos1:'LB',pos2:'CDM'},
+    {name:'도훈',pos1:'RB',pos2:'LB'},
+    {name:'승재',pos1:'CDM', pos2:'CB'},
+    {name:'재기',pos1:'CAM',pos2:'LW'},
+    {name:'준홍',pos1:'CAM',pos2:'ST'},
+    {name:'형태',pos1:'CM',pos2:'CB'},
+    {name:'김영욱',pos1:'ST',pos2:'LW'},
+    {name:'정준',pos1:'CB',pos2:'CM'},
+    {name:'우성',pos1:'RB',pos2:'RW'},
+    {name:'호정',pos1:'RB',pos2:'CB'},
+    {name:'후안',pos1:'CAM',pos2:'CM'},
+    {name:'찬',pos1:'CM',pos2:'CB'},
+    {name:'선우',pos1:'RW',pos2:'RB'},
   ];
   document.getElementById('player-list').innerHTML = '';
   SAMPLE.forEach(s=>createPlayerRow({name:s.name,pos1:s.pos1,pos2:s.pos2||''}));
